@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using SmartLunch.Models;
 
 namespace SmartLunch.Data
 {
@@ -19,5 +20,51 @@ namespace SmartLunch.Data
                 }
             }
         }
+
+        public static async Task SeedUsersAsync(IServiceProvider services)
+        {
+            var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+
+            await CreateUserAsync(userManager, "admin@smartlunch.test", "Admin", "SmartLunch", AdministratorRole);
+            await CreateUserAsync(userManager, "parent1@smartlunch.test", "Marie", "Tremblay", ParentRole);
+            await CreateUserAsync(userManager, "parent2@smartlunch.test", "Luc", "Dubois", ParentRole);
+        }
+
+        private static async Task CreateUserAsync(
+            UserManager<ApplicationUser> userManager,
+            string email,
+            string firstName,
+            string lastName,
+            string role)
+        {
+            // Si le compte existe déjà, on ne le recrée pas
+            if (await userManager.FindByEmailAsync(email) != null)
+            {
+                return;
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true, // obligatoire : Program.cs exige un compte confirmé
+                FirstName = firstName,
+                LastName = lastName
+            };
+
+            // Mot de passe de TEST seulement (respecte les règles d'Identity)
+            var result = await userManager.CreateAsync(user, "Test123!");
+
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(user, role);
+            }
+        }
     }
 }
+
+/*
+Les trois comptes ont le même mot de passe de test : Test123!. Les adresses sont admin@smartlunch.test, parent1@smartlunch.test et parent2@smartlunch.test. Note-les pour le README et pour Doris.
+EmailConfirmed = true est indispensable, sinon la connexion sera refusée.
+Le test FindByEmailAsync évite de créer les comptes en double à chaque démarrage.
+ */
