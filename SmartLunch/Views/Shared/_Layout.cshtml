@@ -1,5 +1,6 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@using SmartLunch.Data
+<!DOCTYPE html>
+<html lang="fr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -21,11 +22,36 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Accueil</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
+
+                        @if (User.IsInRole(IdentitySeeder.ParentRole))
+                        {
+                            @* Menu Parent : les liens seront branchés quand les pages de Doris existeront *@
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" href="#">Mes enfants</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" href="#">Calendrier</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" href="#">Contact</a>
+                            </li>
+                        }
+
+                        @if (User.IsInRole(IdentitySeeder.AdministratorRole))
+                        {
+                            @* Menu Administrator : les liens seront branchés quand mes pages existeront *@
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" href="#">Repas</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" href="#">Menus</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" href="#">Commandes du jour</a>
+                            </li>
+                        }
                     </ul>
                     <partial name="_LoginPartial" />
                 </div>
@@ -40,7 +66,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2026 - SmartLunch - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2026 - SmartLunch - <a asp-area="" asp-controller="Home" asp-action="Privacy">Confidentialité</a>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
