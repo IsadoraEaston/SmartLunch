@@ -55,9 +55,18 @@ namespace SmartLunch.Data
             // Mot de passe de TEST seulement (respecte les règles d'Identity)
             var result = await userManager.CreateAsync(user, "Test123!");
 
-            if (result.Succeeded)
+            if (!result.Succeeded)
             {
-                await userManager.AddToRoleAsync(user, role);
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new InvalidOperationException($"Impossible de créer le compte {email} : {errors}");
+            }
+
+            var roleResult = await userManager.AddToRoleAsync(user, role);
+
+            if (!roleResult.Succeeded)
+            {
+                var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                throw new InvalidOperationException($"Impossible d'ajouter {email} au rôle {role} : {errors}");
             }
         }
     }
