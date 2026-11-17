@@ -17,6 +17,18 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    // Les rôles sont nécessaires dans tous les environnements
+    await IdentitySeeder.SeedRolesAsync(scope.ServiceProvider);
+
+    // Les comptes de test seulement en développement
+    if (app.Environment.IsDevelopment())
+    {
+        await IdentitySeeder.SeedUsersAsync(scope.ServiceProvider);
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
