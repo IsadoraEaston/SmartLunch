@@ -34,5 +34,61 @@ namespace SmartLunch.Controllers
 
             return View(children);
         }
+
+
+        // GET: /Children/Create — affiche le formulaire vide
+        public async Task<IActionResult> Create()
+        {
+            var vm = new ChildFormViewModel
+            {
+                AvailableAllergies = await LoadAllergiesAsync()
+            };
+            return View(vm);
+        }
+
+        // POST: /Children/Create — reçoit et enregistre le formulaire
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ChildFormViewModel vm)
+        {
+            // Si un champ est invalide, on réaffiche le formulaire avec les erreurs
+            if (!ModelState.IsValid)
+            {
+                vm.AvailableAllergies = await LoadAllergiesAsync();
+                return View(vm);
+            }
+
+            var child = new Child
+            {
+                FirstName = vm.FirstName.Trim(),
+                LastName = vm.LastName.Trim(),
+                ClassNumber = vm.ClassNumber.Trim(),
+                FoodPreferences = vm.FoodPreferences?.Trim(),
+                ParentId = _userManager.GetUserId(User)!   // c'est le SERVEUR qui choisit le parent
+            };
+
+            // On ne garde que les allergies qui existent vraiment dans la base
+            var validIds = await _context.Allergies
+                .Where(a => vm.SelectedAllergyIds.Contains(a.Id))
+                .Select(a => a.Id)
+                .ToListAsync();
+
+            foreach (var allergyId in validIds)
+            {
+                child.ChildAllergies.Add(new ChildAllergy { AllergyId = allergyId });
+            }
+
+            _context.Children.Add(child);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"{child.FirstName} a été inscrit(e) au service SmartLunch.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Charge toutes les allergies, triées par nom, pour les cases à cocher
+        private async Task<List<Allergy>> LoadAllergiesAsync()
+        {
+            return await _context.Allergies.OrderBy(a => a.Name).ToListAsync();
+        }
     }
 }
