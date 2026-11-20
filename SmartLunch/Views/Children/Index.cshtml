@@ -1,0 +1,56 @@
+﻿@model IEnumerable<SmartLunch.Models.Child>
+
+@{
+    ViewData["Title"] = "Mes enfants";
+}
+
+<h1>Mes enfants</h1>
+
+<p>
+    <a asp-action="Create" class="btn btn-primary">Ajouter un enfant</a>
+</p>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        Vous n'avez encore inscrit aucun enfant au service SmartLunch.
+    </div>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Prénom</th>
+                <th>Nom</th>
+                <th>Classe</th>
+                <th>Allergies</th>
+                <th>Préférences</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var child in Model)
+            {
+                <tr>
+                    <td>@child.FirstName</td>
+                    <td>@child.LastName</td>
+                    <td>@child.ClassNumber</td>
+                    <td>
+                        @if (child.ChildAllergies.Any())
+                        {
+                            foreach (var ca in child.ChildAllergies)
+                            {
+                                <span class="badge bg-danger me-1">@ca.Allergy?.Name</span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">Aucune</span>
+                        }
+                    </td>
+                    <td>@(string.IsNullOrWhiteSpace(child.FoodPreferences) ? "—" : child.FoodPreferences)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
