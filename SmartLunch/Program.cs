@@ -22,10 +22,11 @@ using (var scope = app.Services.CreateScope())
     // Les rôles sont nécessaires dans tous les environnements
     await IdentitySeeder.SeedRolesAsync(scope.ServiceProvider);
 
-    // Les comptes de test seulement en développement
+    // Les comptes de test et les données de démo seulement en développement
     if (app.Environment.IsDevelopment())
     {
         await IdentitySeeder.SeedUsersAsync(scope.ServiceProvider);
+        await DbSeeder.SeedAsync(scope.ServiceProvider);
     }
 }
 
