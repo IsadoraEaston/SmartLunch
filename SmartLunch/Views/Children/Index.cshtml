@@ -31,7 +31,8 @@ else
                 <th>Classe</th>
                 <th>Allergies</th>
                 <th>Préférences</th>
-            </tr>
+                <th></th>
+            </tr
         </thead>
         <tbody>
             @foreach (var child in Model)
@@ -54,6 +55,7 @@ else
                         }
                     </td>
                     <td>@(string.IsNullOrWhiteSpace(child.FoodPreferences) ? "—" : child.FoodPreferences)</td>
+                    <td><a asp-action="Edit" asp-route-id="@child.Id" class="btn btn-sm btn-outline-primary">Modifier</a></td>
                 </tr>
             }
         </tbody>
