@@ -18,7 +18,6 @@ namespace SmartLunch.Controllers.Admin
         }
 
         // GET: Admin/DailyMenus
-        // Liste des journées planifiées (les plus proches d'abord)
         [HttpGet("")]
         public async Task<IActionResult> Index()
         {
@@ -47,12 +46,24 @@ namespace SmartLunch.Controllers.Admin
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, bool isClosed, string? closedReason, int[] mealIds)
         {
-            var menu = await _db.DailyMenus
-                .Include(d => d.DailyMenuMeals)
-                .FirstOrDefaultAsync(d => d.Id == id);
+            // Sans Include : on ne suit pas les anciens DailyMenuMeal
+            var menu = await _db.DailyMenus.FirstOrDefaultAsync(d => d.Id == id);
             if (menu == null) return NotFound();
 
             var chosen = mealIds.Distinct().ToList();
+
+            // Repas actuellement au menu de cette journée
+            var currentMealIds = await _db.DailyMenuMeals
+                .Where(dm => dm.DailyMenuId == id)
+                .Select(dm => dm.MealId)
+                .ToListAsync();
+
+            // Commandes actives de cette journée, regroupées par repas
+            var activeOrdersByMeal = await _db.Orders
+                .Where(o => o.Date == menu.Date && o.Status == OrderStatus.Active)
+                .GroupBy(o => o.MealId)
+                .Select(g => new { MealId = g.Key, Count = g.Count() })
+                .ToListAsync();
 
             if (isClosed)
             {
@@ -65,20 +76,15 @@ namespace SmartLunch.Controllers.Admin
                 {
                     ModelState.AddModelError("", "La raison ne peut pas dépasser 200 caractères.");
                 }
-                else
+                else if (activeOrdersByMeal.Any())
                 {
-                    var hasActiveOrders = await _db.Orders.AnyAsync(o =>
-                        o.Date == menu.Date && o.Status == OrderStatus.Active);
-                    if (hasActiveOrders)
-                    {
-                        ModelState.AddModelError("",
-                            "Cette journée a des commandes actives. Utilisez l'annulation exceptionnelle (qui rembourse les parents).");
-                    }
+                    ModelState.AddModelError("",
+                        "Cette journée a des commandes actives. Utilisez l'annulation exceptionnelle (qui rembourse les parents).");
                 }
             }
             else
             {
-                // Contrainte 3 : exactement 3 repas pour une journée ouverte (validé côté serveur)
+                // Contrainte 3 : exactement 3 repas actifs et différents (validé côté serveur)
                 if (chosen.Count != 3)
                 {
                     ModelState.AddModelError("", "Une journée ouverte doit avoir exactement 3 repas différents.");
@@ -89,6 +95,21 @@ namespace SmartLunch.Controllers.Admin
                     if (validCount != 3)
                     {
                         ModelState.AddModelError("", "Un des repas choisis n'existe pas ou est désactivé.");
+                    }
+                }
+
+                // On ne retire pas un repas qui a des commandes actives ce jour-là
+                foreach (var removedId in currentMealIds.Except(chosen))
+                {
+                    var orders = activeOrdersByMeal.FirstOrDefault(a => a.MealId == removedId);
+                    if (orders != null)
+                    {
+                        var mealName = await _db.Meals
+                            .Where(m => m.Id == removedId)
+                            .Select(m => m.Name)
+                            .FirstOrDefaultAsync();
+                        ModelState.AddModelError("",
+                            $"Impossible de retirer « {mealName} » : {orders.Count} commande(s) active(s) pour ce repas ce jour-là.");
                     }
                 }
             }
@@ -104,10 +125,15 @@ namespace SmartLunch.Controllers.Admin
             menu.IsClosed = isClosed;
             menu.ClosedReason = isClosed ? closedReason!.Trim() : null;
 
-            _db.DailyMenuMeals.RemoveRange(menu.DailyMenuMeals);
-            menu.DailyMenuMeals = isClosed
-                ? new List<DailyMenuMeal>()
-                : chosen.Select(mid => new DailyMenuMeal { DailyMenuId = menu.Id, MealId = mid }).ToList();
+            // Remplace les repas : suppression directe en base, puis ajout des nouveaux
+            await _db.DailyMenuMeals.Where(dm => dm.DailyMenuId == id).ExecuteDeleteAsync();
+            if (!isClosed)
+            {
+                foreach (var mid in chosen)
+                {
+                    _db.DailyMenuMeals.Add(new DailyMenuMeal { DailyMenuId = id, MealId = mid });
+                }
+            }
 
             await _db.SaveChangesAsync();
 
@@ -123,7 +149,7 @@ namespace SmartLunch.Controllers.Admin
         }
 
         // POST: Admin/DailyMenus/Create
-        // Crée une journée vide (fermée tant que 3 repas ne sont pas choisis)
+        // Crée une journée fermée tant que 3 repas ne sont pas choisis
         [HttpPost("Create")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DateOnly date)
@@ -151,7 +177,6 @@ namespace SmartLunch.Controllers.Admin
             _db.DailyMenus.Add(menu);
             await _db.SaveChangesAsync();
 
-            // On passe directement à l'écran où l'on choisit les 3 repas
             return RedirectToAction(nameof(Edit), new { id = menu.Id });
         }
 
