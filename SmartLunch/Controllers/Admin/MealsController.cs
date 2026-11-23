@@ -47,14 +47,17 @@ namespace SmartLunch.Controllers.Admin
             ModelState.Remove(nameof(Meal.FavoriteMeals));
             ModelState.Remove(nameof(Meal.Orders));
 
+            // Garde seulement les allergies qui existent vraiment
+            var validIds = await ValidAllergyIdsAsync(allergyIds);
+
             if (!ModelState.IsValid)
             {
-                await LoadAllergiesAsync(allergyIds);
+                await LoadAllergiesAsync(validIds);
                 return View("~/Views/Admin/Meals/Create.cshtml", meal);
             }
 
             meal.IsActive = true;
-            meal.MealAllergies = allergyIds.Distinct()
+            meal.MealAllergies = validIds
                 .Select(id => new MealAllergy { AllergyId = id })
                 .ToList();
 
@@ -88,15 +91,17 @@ namespace SmartLunch.Controllers.Admin
             ModelState.Remove(nameof(Meal.FavoriteMeals));
             ModelState.Remove(nameof(Meal.Orders));
 
-            var meal = await _db.Meals
-                .Include(m => m.MealAllergies)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            // Sans Include : on ne suit pas les anciens MealAllergy
+            var meal = await _db.Meals.FirstOrDefaultAsync(m => m.Id == id);
             if (meal == null) return NotFound();
+
+            // Garde seulement les allergies qui existent vraiment
+            var validIds = await ValidAllergyIdsAsync(allergyIds);
 
             if (!ModelState.IsValid)
             {
                 input.Id = id;
-                await LoadAllergiesAsync(allergyIds);
+                await LoadAllergiesAsync(validIds);
                 return View("~/Views/Admin/Meals/Edit.cshtml", input);
             }
 
@@ -107,11 +112,12 @@ namespace SmartLunch.Controllers.Admin
             meal.IsVegetarian = input.IsVegetarian;
             meal.IsActive = input.IsActive;
 
-            // Remplace les allergènes
-            _db.MealAllergies.RemoveRange(meal.MealAllergies);
-            meal.MealAllergies = allergyIds.Distinct()
-                .Select(aid => new MealAllergy { MealId = meal.Id, AllergyId = aid })
-                .ToList();
+            // Remplace les allergènes : suppression directe en base, puis ajout des nouveaux
+            await _db.MealAllergies.Where(ma => ma.MealId == id).ExecuteDeleteAsync();
+            foreach (var aid in validIds)
+            {
+                _db.MealAllergies.Add(new MealAllergy { MealId = id, AllergyId = aid });
+            }
 
             await _db.SaveChangesAsync();
 
@@ -124,9 +130,7 @@ namespace SmartLunch.Controllers.Admin
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var meal = await _db.Meals
-                .Include(m => m.MealAllergies)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var meal = await _db.Meals.FirstOrDefaultAsync(m => m.Id == id);
             if (meal == null) return NotFound();
 
             var hasOrders = await _db.Orders.AnyAsync(o => o.MealId == id);
@@ -141,13 +145,23 @@ namespace SmartLunch.Controllers.Admin
             }
             else
             {
-                _db.MealAllergies.RemoveRange(meal.MealAllergies);
+                await _db.MealAllergies.Where(ma => ma.MealId == id).ExecuteDeleteAsync();
                 _db.Meals.Remove(meal);
                 await _db.SaveChangesAsync();
                 TempData["Success"] = $"Le repas « {meal.Name} » a été supprimé.";
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        // Ignore les Id inventés : garde seulement les allergies qui existent
+        private async Task<List<int>> ValidAllergyIdsAsync(int[] allergyIds)
+        {
+            var ids = allergyIds.Distinct().ToList();
+            return await _db.Allergies
+                .Where(a => ids.Contains(a.Id))
+                .Select(a => a.Id)
+                .ToListAsync();
         }
 
         private async Task LoadAllergiesAsync(IEnumerable<int>? selectedIds = null)
