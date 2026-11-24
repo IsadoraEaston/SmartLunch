@@ -1,0 +1,60 @@
+﻿@model IEnumerable<SmartLunch.Models.Meal>
+
+@{
+    ViewData["Title"] = "Gestion des repas";
+}
+
+<h1>Gestion des repas</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<p>
+    <a class="btn btn-primary" href="/Admin/Meals/Create">Ajouter un repas</a>
+</p>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Description</th>
+            <th>Prix</th>
+            <th>Végétarien</th>
+            <th>Allergènes</th>
+            <th>Actif</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var meal in Model)
+        {
+            <tr class="@(meal.IsActive ? "" : "text-muted")">
+                <td>@meal.Name</td>
+                <td>@meal.Description</td>
+                <td>@meal.Price.ToString("C")</td>
+                <td>@(meal.IsVegetarian ? "Oui" : "Non")</td>
+                <td>
+                    @if (meal.MealAllergies.Any())
+                    {
+                        @string.Join(", ", meal.MealAllergies.Select(ma => ma.Allergy?.Name))
+                    }
+                    else
+                    {
+                        <span class="text-muted">Aucun</span>
+                    }
+                </td>
+                <td>@(meal.IsActive ? "Oui" : "Non")</td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" href="/Admin/Meals/Edit/@meal.Id">Modifier</a>
+                    <form method="post" action="/Admin/Meals/Delete/@meal.Id" class="d-inline"
+                          onsubmit="return confirm('Supprimer ou désactiver ce repas ?');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Supprimer</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
