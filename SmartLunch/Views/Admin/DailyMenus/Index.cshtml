@@ -1,0 +1,59 @@
+﻿@model IEnumerable<SmartLunch.Models.DailyMenu>
+
+@{
+    ViewData["Title"] = "Planification des menus";
+}
+
+<h1>Planification des menus</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<p>
+    <a class="btn btn-primary" href="/Admin/DailyMenus/Create">Ajouter une journée</a>
+</p>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>État</th>
+            <th>Repas</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var menu in Model)
+        {
+            <tr>
+                <td>@menu.Date.ToString("dddd d MMMM yyyy")</td>
+                <td>
+                    @if (menu.IsClosed)
+                    {
+                        <span class="badge bg-secondary">Fermée</span>
+                        <span class="text-muted">@menu.ClosedReason</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">Ouverte</span>
+                    }
+                </td>
+                <td>
+                    @if (menu.IsClosed)
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                    else
+                    {
+                        @string.Join(", ", menu.DailyMenuMeals.Select(dm => dm.Meal?.Name))
+                    }
+                </td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" href="/Admin/DailyMenus/Edit/@menu.Id">Modifier</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
