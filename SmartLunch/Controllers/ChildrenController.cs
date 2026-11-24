@@ -62,7 +62,7 @@ namespace SmartLunch.Controllers
             {
                 FirstName = vm.FirstName.Trim(),
                 LastName = vm.LastName.Trim(),
-                ClassNumber = vm.ClassNumber.Trim(),
+                ClassNumber = vm.ClassNumber.Trim().ToUpper(),
                 FoodPreferences = vm.FoodPreferences?.Trim(),
                 ParentId = _userManager.GetUserId(User)!   // c'est le SERVEUR qui choisit le parent
             };
@@ -147,7 +147,7 @@ namespace SmartLunch.Controllers
             // Ta Q1 : ce que le parent a le droit de modifier
             child.FirstName = vm.FirstName.Trim();
             child.LastName = vm.LastName.Trim();
-            child.ClassNumber = vm.ClassNumber.Trim();
+            child.ClassNumber = vm.ClassNumber.Trim().ToUpper();
             child.FoodPreferences = vm.FoodPreferences?.Trim();
 
             // Ta Q4, étape 1 : on efface toutes les allergies actuelles

@@ -18,7 +18,7 @@ namespace SmartLunch.Models
         public string LastName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La classe est obligatoire.")]
-        [RegularExpression(@"^[A-Z]-\d{2}$", ErrorMessage = "Format attendu : une lettre, un tiret et deux chiffres (ex. E-31).")]
+        [RegularExpression(@"^[A-Za-z]-\d{2}$", ErrorMessage = "Format attendu : une lettre, un tiret et deux chiffres (ex. E-31).")]
         [Display(Name = "Classe")]
         public string ClassNumber { get; set; } = string.Empty;
 
