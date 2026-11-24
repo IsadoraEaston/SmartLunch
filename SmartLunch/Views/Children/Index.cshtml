@@ -6,6 +6,11 @@
 
 <h1>Mes enfants</h1>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
 <p>
     <a asp-action="Create" class="btn btn-primary">Ajouter un enfant</a>
 </p>
@@ -26,6 +31,7 @@ else
                 <th>Classe</th>
                 <th>Allergies</th>
                 <th>Préférences</th>
+                <th><span class="visually-hidden">Actions</span></th>
             </tr>
         </thead>
         <tbody>
@@ -49,6 +55,7 @@ else
                         }
                     </td>
                     <td>@(string.IsNullOrWhiteSpace(child.FoodPreferences) ? "—" : child.FoodPreferences)</td>
+                    <td><a asp-action="Edit" asp-route-id="@child.Id" class="btn btn-sm btn-outline-primary">Modifier</a></td>
                 </tr>
             }
         </tbody>

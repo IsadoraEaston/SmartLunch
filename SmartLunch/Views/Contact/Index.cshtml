@@ -1,0 +1,98 @@
+﻿@model SmartLunch.Models.ContactFormViewModel
+
+@{
+    ViewData["Title"] = "Contact";
+}
+
+<h1>Contact</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+@if (!Model.Children.Any())
+{
+    @* Aucun enfant → pas de formulaire *@
+    <div class="alert alert-info">
+        Inscrivez d'abord un enfant pour pouvoir écrire à l'administration.
+        <a asp-controller="Children" asp-action="Create" class="alert-link">Ajouter un enfant</a>
+    </div>
+}
+else
+{
+    @* Le formulaire de l'énoncé : « Pour écrire » *@
+    <div class="card mb-4" style="max-width: 640px;">
+        <div class="card-header text-white fw-bold" style="background-color: #2c6488;">
+            POUR ÉCRIRE
+        </div>
+        <div class="card-body">
+            <form asp-action="Index" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-3">
+                    <select asp-for="ChildId" asp-items="Model.Children" class="form-select">
+                        <option value="">Choix de l'enfant</option>
+                    </select>
+                    <span asp-validation-for="ChildId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <textarea asp-for="Message" class="form-control" rows="5" maxlength="2000"></textarea>
+                    <span asp-validation-for="Message" class="text-danger"></span>
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="btn text-white" style="background-color: #2c6488;">Envoyer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@* L'historique *@
+<h2 class="h4">Mes messages envoyés</h2>
+
+@if (!Model.SentMessages.Any())
+{
+    <p class="text-muted">Aucun message envoyé pour l'instant.</p>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Enfant</th>
+                <th>Message</th>
+                <th>État</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var m in Model.SentMessages)
+            {
+                <tr>
+                    <td>@m.SentAt.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@m.Child?.FirstName</td>
+                    <td>@m.Message</td>
+                    <td>
+                        @if (m.IsRead)
+                        {
+                            <span class="badge bg-success">Lu</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Non lu</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
