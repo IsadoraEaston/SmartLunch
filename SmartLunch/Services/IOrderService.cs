@@ -21,6 +21,12 @@ namespace SmartLunch.Services
         // Même règle de délai que la modification. Une commande déjà annulée ne génère pas de 2e crédit.
         Task<OrderResult> CancelOrderAsync(string parentId, int orderId);
 
+        // Vrai si on peut encore commander, modifier ou annuler ce jour-là (règle de 08 h 30).
+        // Utilisé par le calendrier pour afficher ou non les boutons radio.
+        bool CanStillChange(DateOnly date);
+
+        // Frais de la portion supplémentaire (lus dans appsettings.json), pour l'affichage.
+        decimal ExtraPortionFee { get; }
         // Calcule le total : prix du repas + frais de la portion supplémentaire (lu dans appsettings.json).
         decimal ComputeTotal(Meal meal, bool extraPortion);
     }

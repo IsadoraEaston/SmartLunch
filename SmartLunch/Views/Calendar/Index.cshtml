@@ -1,0 +1,108 @@
+﻿@model SmartLunch.Models.CalendarViewModel
+
+@{
+    ViewData["Title"] = "Calendrier des repas";
+    var current = new DateOnly(Model.Year, Model.Month, 1);
+    var previous = current.AddMonths(-1);
+    var next = current.AddMonths(1);
+}
+
+<h1>Calendrier des repas de @Model.ChildName</h1>
+
+@* Choisir l'enfant (la page se recharge dès qu'on change) *@
+<form method="get" asp-action="Index" class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <label for="childId" class="form-label mb-0">Enfant :</label>
+    <select id="childId" name="childId" class="form-select w-auto"
+            asp-items="Model.Children" onchange="this.form.submit()"></select>
+    <input type="hidden" name="year" value="@Model.Year" />
+    <input type="hidden" name="month" value="@Model.Month" />
+</form>
+
+@* Navigation entre les mois *@
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a class="btn btn-outline-secondary btn-sm"
+       asp-action="Index" asp-route-childId="@Model.ChildId"
+       asp-route-year="@previous.Year" asp-route-month="@previous.Month">← Mois précédent</a>
+    <h2 class="h4 mb-0">@current.ToString("MMMM yyyy")</h2>
+    <a class="btn btn-outline-secondary btn-sm"
+       asp-action="Index" asp-route-childId="@Model.ChildId"
+       asp-route-year="@next.Year" asp-route-month="@next.Month">Mois suivant →</a>
+</div>
+
+@* Légende *@
+<p class="small text-muted">
+    😊 Repas populaire · ❤️ Repas favori · ⚠️ Contient un allergène de l'enfant ·
+    Portion supplémentaire : + @Model.ExtraPortionFee.ToString("C")
+</p>
+
+@foreach (var week in Model.Weeks)
+{
+    <div class="row row-cols-1 row-cols-md-5 g-2 mb-2">
+        @foreach (var day in week)
+        {
+            <div class="col">
+                @if (day != null)
+                {
+                    <div class="card h-100 @(day.Type == CalendarDayType.Open ? "" : "bg-light")">
+                        <div class="card-header text-white small fw-bold" style="background-color: #2c6488;">
+                            @day.Date.ToString("dddd d MMMM")
+                        </div>
+                        <div class="card-body p-2 small">
+                            @switch (day.Type)
+                            {
+                                case CalendarDayType.NoMenu:
+                                    <p class="text-muted mb-0">Aucun menu prévu.</p>
+                                    break;
+
+                                case CalendarDayType.Closed:
+                                    <p class="text-muted mb-0">@day.ClosedReason</p>
+                                    break;
+
+                                default:
+                                    if (day.Type == CalendarDayType.Locked)
+                                    {
+                                        <p class="text-muted fst-italic mb-2">Période de commande terminée</p>
+                                    }
+
+                                    foreach (var meal in day.Meals)
+                                    {
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input" type="radio"
+                                                   name="meal-@day.Date.ToString("yyyyMMdd")"
+                                                   id="meal-@day.Date.ToString("yyyyMMdd")-@meal.MealId"
+                                                   value="@meal.MealId"
+                                                   checked="@(day.OrderedMealId == meal.MealId)"
+                                                   disabled />
+                                            <label class="form-check-label" for="meal-@day.Date.ToString("yyyyMMdd")-@meal.MealId">
+                                                @meal.Name
+                                                @if (meal.IsPopular) { <span title="Repas populaire">😊</span> }
+                                                @if (meal.IsFavorite) { <span title="Repas favori">❤️</span> }
+                                                <span class="text-muted">· @meal.Price.ToString("C")</span>
+                                            </label>
+                                                @if (!string.IsNullOrWhiteSpace(meal.Description))
+                                            {
+                                                <div class="small text-muted">@meal.Description</div>
+                                            }
+                                            @if (meal.AllergyWarnings.Any())
+                                            {
+                                                <div class="text-danger">⚠️ Contient : @string.Join(", ", meal.AllergyWarnings)</div>
+                                            }
+                                        </div>
+                                    }
+
+                                    if (day.OrderedTotal != null)
+                                    {
+                                        <p class="fw-bold mt-2 mb-0">
+                                            Commandé : @day.OrderedTotal.Value.ToString("C")
+                                            @(day.OrderedExtraPortion ? "(portion supplémentaire)" : "")
+                                        </p>
+                                    }
+                                    break;
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}

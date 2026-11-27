@@ -26,6 +26,11 @@ namespace SmartLunch.Services
         public decimal ComputeTotal(Meal meal, bool extraPortion)
             => meal.Price + (extraPortion ? ExtraFee : 0m);
 
+        // Même règle que CutoffError : une seule source de vérité pour le calendrier et le service
+        public bool CanStillChange(DateOnly date) => CutoffError(date, "modifier") == null;
+
+        public decimal ExtraPortionFee => ExtraFee;
+
         public async Task<OrderResult> PlaceOrderAsync(
             string parentId, int childId, DateOnly date, int mealId, bool extraPortion)
         {
