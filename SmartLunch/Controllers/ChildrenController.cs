@@ -64,7 +64,8 @@ namespace SmartLunch.Controllers
                 LastName = vm.LastName.Trim(),
                 ClassNumber = vm.ClassNumber.Trim().ToUpper(),
                 FoodPreferences = vm.FoodPreferences?.Trim(),
-                ParentId = _userManager.GetUserId(User)!   // c'est le SERVEUR qui choisit le parent
+                ParentId = _userManager.GetUserId(User)!,  // c'est le SERVEUR qui choisit le parent
+                Status = ChildStatus.Pending  // Nouvel enfant = en attente d'une approbation par l'administrateur
             };
 
             // On ne garde que les allergies qui existent vraiment dans la base
@@ -81,17 +82,17 @@ namespace SmartLunch.Controllers
             _context.Children.Add(child);
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = $"{child.FirstName} a été inscrit(e) au service SmartLunch.";
+            TempData["Success"] = $"{child.FirstName} a été inscrit(e). L'inscription est en attente d'approbation par l'administration.";
             return RedirectToAction(nameof(Index));
         }
 
 
-        // GET: /Children/Edit/5 — formulaire pré-rempli (ta Q3)
+        // GET: /Children/Edit/5 — formulaire pré-rempli
         public async Task<IActionResult> Edit(int id)
         {
             var parentId = _userManager.GetUserId(User);
 
-            // Ta Q2 : l'enfant doit avoir CET Id ET appartenir à CE parent
+            // Contrainte 1 : l'enfant doit appartenir au parent connecté
             var child = await _context.Children
                 .Include(c => c.ChildAllergies)
                 .FirstOrDefaultAsync(c => c.Id == id && c.ParentId == parentId);
@@ -129,7 +130,7 @@ namespace SmartLunch.Controllers
 
             var parentId = _userManager.GetUserId(User);
 
-            // Ta Q2, une deuxième fois : un tricheur peut envoyer le formulaire directement
+            // Une deuxième fois : un tricheur peut envoyer le formulaire directement
             var child = await _context.Children
                 .FirstOrDefaultAsync(c => c.Id == id && c.ParentId == parentId);
 
@@ -144,18 +145,24 @@ namespace SmartLunch.Controllers
                 return View(vm);
             }
 
-            // Ta Q1 : ce que le parent a le droit de modifier
+            // Champs modifiables par le parent (pas de ParentId : anti-overposting)
             child.FirstName = vm.FirstName.Trim();
             child.LastName = vm.LastName.Trim();
             child.ClassNumber = vm.ClassNumber.Trim().ToUpper();
             child.FoodPreferences = vm.FoodPreferences?.Trim();
 
-            // Ta Q4, étape 1 : on efface toutes les allergies actuelles
+            // On garde les allergies actuelles pour savoir si le parent les a modifiées
+            var oldAllergyIds = await _context.ChildAllergies
+                .Where(ca => ca.ChildId == child.Id)
+                .Select(ca => ca.AllergyId)
+                .ToListAsync();
+
+            // Mise à jour des allergies : on efface tout, puis on recrée la sélection
             await _context.ChildAllergies
                 .Where(ca => ca.ChildId == child.Id)
                 .ExecuteDeleteAsync();
 
-            // Ta Q4, étape 2 : on remplit avec les nouvelles (seulement celles qui existent)
+            // On remplit avec les nouvelles (seulement celles qui existent)
             var validIds = await _context.Allergies
                 .Where(a => vm.SelectedAllergyIds.Contains(a.Id))
                 .Select(a => a.Id)
@@ -166,9 +173,23 @@ namespace SmartLunch.Controllers
                 _context.ChildAllergies.Add(new ChildAllergy { ChildId = child.Id, AllergyId = allergyId });
             }
 
+            // Règle d'approbation : si les allergies changent, l'administrateur doit revalider
+            // l'inscription (sécurité alimentaire). Un enfant rejeté que le parent corrige
+            // repasse aussi en attente.
+            var allergiesChanged = !oldAllergyIds.ToHashSet().SetEquals(validIds);
+            var backToPending = allergiesChanged || child.Status == ChildStatus.Rejected;
+
+            if (backToPending)
+            {
+                child.Status = ChildStatus.Pending;
+                child.RejectionReason = null;
+            }
+
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = $"Le dossier de {child.FirstName} a été mis à jour.";
+            TempData["Success"] = backToPending
+                ? $"Le dossier de {child.FirstName} a été mis à jour. Il est en attente d'approbation par l'administration."
+                : $"Le dossier de {child.FirstName} a été mis à jour.";
             return RedirectToAction(nameof(Index));
         }
 

@@ -2,6 +2,13 @@
 
 namespace SmartLunch.Models
 {
+    // Statut de l'inscription d'un enfant (règle de l'enseignante)
+    public enum ChildStatus
+    {
+        Pending = 0,    // En attente d'approbation
+        Approved = 1,   // Approuvé : peut commander
+        Rejected = 2    // Rejeté par l'administrateur
+    }
     public class Child
     {
         public int Id { get; set; }
@@ -23,6 +30,15 @@ namespace SmartLunch.Models
         [StringLength(500)]
         [Display(Name = "Préférences alimentaires")]
         public string? FoodPreferences { get; set; }
+
+        // Nouvel enfant = en attente ; seul un enfant approuvé peut commander
+        [Display(Name = "Statut")]
+        public ChildStatus Status { get; set; } = ChildStatus.Pending;
+
+        // Raison du rejet, affichée au parent
+        [StringLength(200)]
+        [Display(Name = "Raison du rejet")]
+        public string? RejectionReason { get; set; }
 
         // Le parent de l'enfant (clé étrangère vers ApplicationUser)
         [Required]
