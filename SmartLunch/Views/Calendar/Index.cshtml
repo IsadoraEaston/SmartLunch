@@ -79,6 +79,10 @@
                                                 @if (meal.IsFavorite) { <span title="Repas favori">❤️</span> }
                                                 <span class="text-muted">· @meal.Price.ToString("C")</span>
                                             </label>
+                                                @if (!string.IsNullOrWhiteSpace(meal.Description))
+                                            {
+                                                <div class="small text-muted">@meal.Description</div>
+                                            }
                                             @if (meal.AllergyWarnings.Any())
                                             {
                                                 <div class="text-danger">⚠️ Contient : @string.Join(", ", meal.AllergyWarnings)</div>
