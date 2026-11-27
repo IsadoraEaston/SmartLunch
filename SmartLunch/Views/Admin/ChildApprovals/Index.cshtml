@@ -1,0 +1,99 @@
+﻿@model List<SmartLunch.Models.Child>
+@using SmartLunch.Models
+
+@{
+    ViewData["Title"] = "Inscriptions";
+    var pendingCount = Model.Count(c => c.Status == ChildStatus.Pending);
+}
+
+<h1>Inscriptions des enfants</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<p>
+    @if (pendingCount == 0)
+    {
+        <span class="text-muted">Aucune inscription en attente.</span>
+    }
+    else
+    {
+        <strong>@pendingCount inscription(s) en attente d'approbation.</strong>
+    }
+</p>
+
+<table class="table align-middle">
+    <thead>
+        <tr>
+            <th>Enfant</th>
+            <th>Classe</th>
+            <th>Parent</th>
+            <th>Allergies</th>
+            <th>Préférences</th>
+            <th>Statut</th>
+            <th><span class="visually-hidden">Actions</span></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var child in Model)
+        {
+            <tr class="@(child.Status == ChildStatus.Pending ? "table-warning" : "")">
+                <td>@child.FirstName @child.LastName</td>
+                <td>@child.ClassNumber</td>
+                <td>
+                    @child.Parent?.FirstName @child.Parent?.LastName
+                    <div class="small text-muted">@child.Parent?.Email</div>
+                </td>
+                <td>
+                    @if (child.ChildAllergies.Any())
+                    {
+                        foreach (var ca in child.ChildAllergies)
+                        {
+                            <span class="badge bg-danger me-1">@ca.Allergy?.Name</span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="text-muted">Aucune</span>
+                    }
+                </td>
+                <td>@(string.IsNullOrWhiteSpace(child.FoodPreferences) ? "—" : child.FoodPreferences)</td>
+                <td>
+                    @switch (child.Status)
+                    {
+                        case ChildStatus.Approved:
+                            <span class="badge bg-success">Approuvé</span>
+                            break;
+                        case ChildStatus.Rejected:
+                            <span class="badge bg-danger">Rejeté</span>
+                            <div class="small text-muted">@child.RejectionReason</div>
+                            break;
+                        default:
+                            <span class="badge bg-warning text-dark">En attente</span>
+                            break;
+                    }
+                </td>
+                <td style="min-width: 260px;">
+                    @if (child.Status == ChildStatus.Pending)
+                    {
+                        <form asp-action="Approve" asp-route-id="@child.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-success">Approuver</button>
+                        </form>
+
+                        <form asp-action="Reject" asp-route-id="@child.Id" method="post" class="d-flex gap-1 mt-1">
+                            <input type="text" name="reason" class="form-control form-control-sm"
+                                   placeholder="Raison du rejet" maxlength="200" required />
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Rejeter</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
