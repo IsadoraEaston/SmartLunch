@@ -33,6 +33,10 @@ namespace SmartLunch.Services
             var child = await _db.Children.FirstOrDefaultAsync(c => c.Id == childId && c.ParentId == parentId);
             if (child == null) return OrderResult.Fail("Enfant introuvable.");
 
+            // Règle d'approbation : seul un enfant approuvé par l'administration peut commander
+            if (child.Status != ChildStatus.Approved)
+                return OrderResult.Fail("L'inscription de cet enfant n'est pas encore approuvée par l'administration.");
+
             var timeError = CutoffError(date, "commander");
             if (timeError != null) return OrderResult.Fail(timeError);
 
@@ -62,6 +66,11 @@ namespace SmartLunch.Services
                 .FirstOrDefaultAsync(o => o.Id == orderId && o.Child!.ParentId == parentId);
             if (order == null || order.Child == null) return OrderResult.Fail("Commande introuvable.");
             if (order.Status != OrderStatus.Active) return OrderResult.Fail("Cette commande est déjà annulée.");
+
+            // Un enfant repassé en attente (allergies modifiées) ne peut pas changer de repas
+            // tant que l'administration n'a pas revalidé ses allergies
+            if (order.Child.Status != ChildStatus.Approved)
+                return OrderResult.Fail("L'inscription de cet enfant doit être revalidée avant de modifier une commande.");
 
             var timeError = CutoffError(order.Date, "modifier");
             if (timeError != null) return OrderResult.Fail(timeError);

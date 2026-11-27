@@ -1,5 +1,5 @@
 ﻿@model IEnumerable<SmartLunch.Models.Child>
-
+@using SmartLunch.Models
 @{
     ViewData["Title"] = "Mes enfants";
 }
@@ -31,6 +31,7 @@ else
                 <th>Classe</th>
                 <th>Allergies</th>
                 <th>Préférences</th>
+                <th>Statut</th>
                 <th><span class="visually-hidden">Actions</span></th>
             </tr>
         </thead>
@@ -55,6 +56,24 @@ else
                         }
                     </td>
                     <td>@(string.IsNullOrWhiteSpace(child.FoodPreferences) ? "—" : child.FoodPreferences)</td>
+                                        <td>
+                        @switch (child.Status)
+                        {
+                            case ChildStatus.Approved:
+                                <span class="badge bg-success">Approuvé</span>
+                                break;
+                            case ChildStatus.Rejected:
+                                <span class="badge bg-danger">Rejeté</span>
+                                @if (!string.IsNullOrWhiteSpace(child.RejectionReason))
+                                {
+                                    <div class="small text-muted">@child.RejectionReason</div>
+                                }
+                                break;
+                            default:
+                                <span class="badge bg-warning text-dark">En attente</span>
+                                break;
+                        }
+                    </td>
                     <td><a asp-action="Edit" asp-route-id="@child.Id" class="btn btn-sm btn-outline-primary">Modifier</a></td>
                 </tr>
             }
